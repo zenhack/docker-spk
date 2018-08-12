@@ -50,3 +50,5 @@ $ $ docker2spk -imagefile ```
 # License
 
 Apache 2.0, see COPYING.
+
+[dep]: https://github.com/golang/dep
