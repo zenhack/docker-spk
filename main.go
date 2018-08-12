@@ -203,10 +203,21 @@ func buildArchive(dockerImage io.ReadSeeker, seg *capnp.Segment) (spk.Archive, e
 	if err != nil {
 		return ret, err
 	}
+
+	_, ok := allFiles["sandstorm-manifest"]
+	if !ok {
+		fmt.Fprintln(os.Stderr,
+			"Warning: this Docker image does not contain a "+
+				"sandstorm-manifest. The resulting sandstorm package "+
+				"will not function without this!")
+	}
+
 	err = ret.SetFiles(rootFiles)
 	return ret, err
 }
 
+// Read in the docker image located at filename, and return the raw bytes of a
+// capnproto message with an equivalent Archive as its root.
 func archiveBytesFromFilename(filename string) []byte {
 	file, err := os.Open(filename)
 	chkfatal("opening image file", err)
