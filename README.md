@@ -44,7 +44,6 @@ Usage of docker2spk:
     	Path to sandstorm keyring (default ~/.sandstorm-keyring)
   -out string
     	File name of the resulting spk (default inferred from -image)
-$ docker2spk -imagefile
 ```
 
 # License
