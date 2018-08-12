@@ -2,7 +2,10 @@
 packages (`.spk` files).
 
 Note that an arbitrary Docker image will not work; the filesystem must
-still be constructed to behave according to sandstorm's expectations.
+still be constructed to behave according to sandstorm's expectations. In
+particular, this includes construction of /sandstorm-manifest, which
+contains all of the application metadata, and arranging for the
+container to work inside of sandstorm's sandbox (rather than Docker).
 
 # Building
 
