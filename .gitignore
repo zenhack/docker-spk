@@ -1,0 +1,9 @@
+# The executable:
+/docker2spk
+
+# Standard go thing: vendor directory.
+vendor
+
+# Stuff likely to be created when experimenting:
+*.tar
+*.spk
