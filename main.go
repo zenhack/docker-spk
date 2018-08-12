@@ -159,6 +159,9 @@ func buildArchive(dockerImage io.ReadSeeker, seg *capnp.Segment) (spk.Archive, e
 				continue
 			}
 			this, err := nextChild(name)
+			if err != nil {
+				return ret, err
+			}
 			allFiles[name] = this
 			switch hdr.Typeflag {
 			case tar.TypeDir:
