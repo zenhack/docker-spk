@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"encoding/base32"
 	"errors"
 	"flag"
 	"fmt"
@@ -17,11 +18,22 @@ import (
 )
 
 var (
+	// Sandstorm uses a custom base32 alphabet.
+	SandstormBase32Encoding = base32.NewEncoding("0123456789acdefghjkmnpqrstuvwxyz").
+				WithPadding(base32.NoPadding)
+
 	imageName = flag.String("image", "",
 		"File containing Docker image to convert (output of \"docker save\")",
 	)
 	outFilename = flag.String("out", "",
 		"File name of the resulting spk (default inferred from -image)",
+	)
+	keyringPath = flag.String("keyring", "",
+		"Path to sandstorm keyring (default ~/.sandstorm-keyring)",
+	)
+	appId = flag.String("appid", "",
+		"The app id to assign to the package. The private key for this "+
+			"must be available in your sandstorm keyring.",
 	)
 
 	ErrNotADir = errors.New("Not a directory")
@@ -37,7 +49,7 @@ func basename(name string) string {
 
 func chkfatal(context string, err error) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: %v", context, err)
+		fmt.Fprintf(os.Stderr, "%s: %v\n", context, err)
 		os.Exit(1)
 	}
 }
@@ -210,28 +222,40 @@ func archiveBytesFromFilename(filename string) []byte {
 	return bytes
 }
 
-func signatureMessage(archiveBytes []byte) []byte {
-	sigMsg, sigSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
-	chkfatal("Allocating message for signature", err)
-	_, err = spk.NewRootSignature(sigSeg)
-	chkfatal("Allocating signature in message", err)
-	bytes, err := sigMsg.Marshal()
-	chkfatal("marshalling signature message", err)
-	return bytes
+func usageErr(info string) {
+	fmt.Fprintln(os.Stderr, info)
+	fmt.Fprintln(os.Stderr)
+	flag.Usage()
+	os.Exit(1)
 }
 
 func main() {
 	flag.Parse()
 
 	if *imageName == "" {
-		fmt.Fprintln(os.Stderr, "Missing option: -image")
-		fmt.Fprintln(os.Stderr)
-		flag.Usage()
-		os.Exit(1)
+		usageErr("Missing option: -image")
 	}
 
+	if *keyringPath == "" {
+		// The user didn't specify a keyring; use the default.
+		*keyringPath = os.Getenv("HOME") + "/.sandstorm-keyring"
+	}
+
+	if *appId == "" {
+		usageErr("Missing option: -appid")
+	}
+
+	keyring, err := loadKeyring(*keyringPath)
+	chkfatal("loading the sandstorm keyring", err)
+
+	appPubKey, err := SandstormBase32Encoding.DecodeString(*appId)
+	chkfatal("Parsing the app id", err)
+
+	appKeyFile, err := keyring.GetKey(appPubKey)
+	chkfatal("Fetching the app private key", err)
+
 	archiveBytes := archiveBytesFromFilename(*imageName)
-	sigBytes := signatureMessage(archiveBytes)
+	sigBytes := signatureMessage(appKeyFile, archiveBytes)
 
 	if *outFilename == "" {
 		// infer output file from input file.

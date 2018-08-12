@@ -40,3 +40,7 @@
 [[constraint]]
   name = "github.com/ulikunitz/xz"
   version = "0.5.4"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"

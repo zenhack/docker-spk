@@ -16,6 +16,19 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:004a9dee686b6574536032e11144dd50a74ab021f1dd446895db20293dfbd1e1"
+  name = "golang.org/x/crypto"
+  packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519",
+    "internal/subtle",
+    "nacl/sign",
+  ]
+  pruneopts = "UT"
+  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+
+[[projects]]
+  branch = "master"
   digest = "1:0bb09a71886b60254b1170233f9c87f747da1b30c7cf0c9464eb08b4823ae3e1"
   name = "zenhack.net/go/sandstorm"
   packages = [
@@ -57,6 +70,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/ulikunitz/xz",
+    "golang.org/x/crypto/nacl/sign",
     "zenhack.net/go/sandstorm/capnp/spk",
     "zombiezen.com/go/capnproto2",
   ]
