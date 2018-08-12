@@ -22,11 +22,11 @@ var (
 	SandstormBase32Encoding = base32.NewEncoding("0123456789acdefghjkmnpqrstuvwxyz").
 				WithPadding(base32.NoPadding)
 
-	imageName = flag.String("image", "",
+	imageName = flag.String("imagefile", "",
 		"File containing Docker image to convert (output of \"docker save\")",
 	)
 	outFilename = flag.String("out", "",
-		"File name of the resulting spk (default inferred from -image)",
+		"File name of the resulting spk (default inferred from -imagefile)",
 	)
 	keyringPath = flag.String("keyring", "",
 		"Path to sandstorm keyring (default ~/.sandstorm-keyring)",
