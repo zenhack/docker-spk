@@ -82,9 +82,6 @@ func supportedTypeFlag(hdr *tar.Header) bool {
 // to be reachable.
 func buildArchive(dockerImage io.ReadSeeker, seg *capnp.Segment) (spk.Archive, error) {
 	dirSizes := getDirSizes(dockerImage)
-	for k, v := range dirSizes {
-		fmt.Fprintf(os.Stderr, "%q = %d\n", k, v)
-	}
 
 	ret, err := spk.NewArchive(seg)
 	if err != nil {
