@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ulikunitz/xz"
 	"zenhack.net/go/sandstorm/capnp/spk"
@@ -16,8 +17,12 @@ import (
 )
 
 var (
-	imageName   = flag.String("image", "", "Docker image to convert")
-	outFilename = flag.String("out", "package.spk", "where to save the spk")
+	imageName = flag.String("image", "",
+		"File containing Docker image to convert (output of \"docker save\")",
+	)
+	outFilename = flag.String("out", "",
+		"File name of the resulting spk (default inferred from -image)",
+	)
 
 	ErrNotADir = errors.New("Not a directory")
 )
@@ -217,8 +222,26 @@ func signatureMessage(archiveBytes []byte) []byte {
 
 func main() {
 	flag.Parse()
+
+	if *imageName == "" {
+		fmt.Fprintln(os.Stderr, "Missing option: -image")
+		fmt.Fprintln(os.Stderr)
+		flag.Usage()
+		os.Exit(1)
+	}
+
 	archiveBytes := archiveBytesFromFilename(*imageName)
 	sigBytes := signatureMessage(archiveBytes)
+
+	if *outFilename == "" {
+		// infer output file from input file.
+		stem := *imageName
+		if strings.HasSuffix(stem, ".tar") {
+			stem = stem[:len(*imageName)-len(".tar")]
+		}
+		stem += ".spk"
+		*outFilename = stem
+	}
 
 	outFile, err := os.Create(*outFilename)
 	chkfatal("opening output file", err)
