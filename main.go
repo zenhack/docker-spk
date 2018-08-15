@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,165 +53,34 @@ func chkfatal(context string, err error) {
 	}
 }
 
-// Build a map of the number of files inside of each directory in the
-// docker image. Later on, this enables us to allocate lists of the
-// correct size in the capnproto message.
-func getDirSizes(dockerImage io.ReadSeeker) map[string]int {
-	dirSizes := map[string]int{}
-
-	layerIt := iterLayers(dockerImage)
-	for layerIt.Next() {
-		tarIt := layerIt.Cur()
-		for tarIt.Next() {
-			hdr := tarIt.Cur()
-			name := filepath.Clean(hdr.Name)
-			parentName := dirname(name)
-			switch hdr.Typeflag {
-			case tar.TypeDir:
-				// Make sure the dir is actually in the map. Will
-				// set the initial count to 0 if not, otherwise
-				// will leave it unchanged.
-				dirSizes[name] = dirSizes[name]
-				fallthrough
-			case tar.TypeReg, tar.TypeSymlink:
-				dirSizes[parentName]++
-			}
-		}
-		chkfatal("tar file", tarIt.Err())
-	}
-	chkfatal("layer", layerIt.Err())
-	return dirSizes
-}
-
-// Return whether the tar.Header's Typeflag field indicates a file type that
-// we support inside of an archive -- symlinks, regular files, and directories.
-func supportedTypeFlag(hdr *tar.Header) bool {
-	flag := hdr.Typeflag
-	return flag == tar.TypeDir ||
-		flag == tar.TypeReg ||
-		flag == tar.TypeSymlink
-}
-
 // Build an archive from the docker image, preferring allocation in `seg`
 // (and definitely allocating in the same message). The resulting archive
 // is an orphan inside the message; it must be attached somewhere for it
 // to be reachable.
-func buildArchive(dockerImage io.ReadSeeker, seg *capnp.Segment) (spk.Archive, error) {
-	dirSizes := getDirSizes(dockerImage)
-
+func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest []byte) (spk.Archive, error) {
 	ret, err := spk.NewArchive(seg)
 	if err != nil {
 		return ret, err
 	}
-
-	_, err = dockerImage.Seek(0, 0)
+	img, err := readDockerImage(tar.NewReader(dockerImage))
 	if err != nil {
 		return ret, err
 	}
-
-	allFiles := map[string]spk.Archive_File{}
-
-	var (
-		nextChild func(name string) (spk.Archive_File, error)
-		getParent func(name string) (spk.Archive_File, error)
-	)
-	nextChild = func(name string) (spk.Archive_File, error) {
-		parent, err := getParent(name)
-		dir, err := parent.Directory()
-		if err != nil {
-			return spk.Archive_File{}, err
-		}
-		parentName := dirname(name)
-		child := dir.At(dir.Len() - dirSizes[parentName])
-		err = child.SetName(basename(name))
-		dirSizes[parentName]--
-		return child, err
-	}
-
-	getParent = func(name string) (spk.Archive_File, error) {
-		var err error
-		parentName := dirname(name)
-		ret, ok := allFiles[parentName]
-		if !ok {
-			ret, err = nextChild(parentName)
-			if err != nil {
-				return ret, err
-			}
-			_, err = ret.NewDirectory(int32(dirSizes[parentName]))
-			if err != nil {
-				return ret, err
-			}
-			allFiles[parentName] = ret
-		}
-		return ret, nil
-	}
-
-	// TODO: we don't actually use this node, just its children -- it would
-	// be good to avoid it being in the message.
-	root, err := spk.NewArchive_File(seg)
+	tree, err := img.toTree()
 	if err != nil {
 		return ret, err
 	}
-	rootFiles, err := root.NewDirectory(int32(dirSizes["."]))
-	if err != nil {
-		return ret, err
-	}
-	allFiles["."] = root
-
-	layerIt := iterLayers(dockerImage)
-	for layerIt.Next() {
-		tarIt := layerIt.Cur()
-		for tarIt.Next() {
-			hdr := tarIt.Cur()
-			if !supportedTypeFlag(hdr) {
-				continue
-			}
-			name := filepath.Clean(hdr.Name)
-			this, ok := allFiles[name]
-			if ok {
-				continue
-			}
-			this, err := nextChild(name)
-			if err != nil {
-				return ret, err
-			}
-			allFiles[name] = this
-			switch hdr.Typeflag {
-			case tar.TypeDir:
-				_, err = this.NewDirectory(int32(dirSizes[name]))
-			case tar.TypeSymlink:
-				err = this.SetSymlink(hdr.Linkname)
-			case tar.TypeReg:
-				bytes, err := ioutil.ReadAll(tarIt.Reader())
-				if err != nil {
-					return ret, err
-				}
-				// We treat an executable bit for anyone as an
-				// executable.
-				if hdr.FileInfo().Mode().Perm()&0111 == 0 {
-					err = this.SetRegular(bytes)
-				} else {
-					err = this.SetExecutable(bytes)
-				}
-			}
-			if err != nil {
-				return ret, err
-			}
-		}
-	}
-	if err != nil {
-		return ret, err
-	}
-
-	_, ok := allFiles["sandstorm-manifest"]
-	if !ok {
+	if manifest == nil {
 		fmt.Fprintln(os.Stderr,
 			"Warning: this Docker image does not contain a "+
 				"sandstorm-manifest. The resulting sandstorm package "+
 				"will not function without this!")
+	} else {
+		tree["sandstorm-manifest"] = &File{
+			data: manifest,
+		}
 	}
-
-	err = ret.SetFiles(rootFiles)
+	err = tree.ToArchive(ret)
 	return ret, err
 }
 
@@ -224,7 +92,7 @@ func archiveBytesFromFilename(filename string) []byte {
 	defer file.Close()
 	archiveMsg, archiveSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
 	chkfatal("allocating a message", err)
-	archive, err := buildArchive(file, archiveSeg)
+	archive, err := buildArchive(file, archiveSeg, nil)
 	chkfatal("building the archive", err)
 	err = archiveMsg.SetRoot(archive.Struct.ToPtr())
 	chkfatal("setting root pointer", err)
