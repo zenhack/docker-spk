@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"zenhack.net/go/sandstorm/capnp/spk"
 )
 
@@ -61,6 +62,7 @@ func insertDir(dest spk.Archive_File_List, t Tree) error {
 }
 
 func insertFile(dest spk.Archive_File, name string, file *File) error {
+	fmt.Println(name)
 	err := dest.SetName(name)
 	if err != nil {
 		return err
