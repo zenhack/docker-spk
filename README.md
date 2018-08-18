@@ -3,7 +3,7 @@ build the root filesystems.
 
 It is a work in progress, but already supports converting docker images
 to sandstorm packages (`.spk` files), and signing and populating them
-with metadata based on 1sandstorm-pkgdef.capnp`.
+with metadata based on `sandstorm-pkgdef.capnp`.
 
 Note that it is not possibly to automatically convert an arbitrary
 Docker image and have it work; the filesystem must be constructed to
