@@ -1,9 +1,13 @@
-`docker2spk` is a simple tool to convert Docker images to sandstorm
-packages (`.spk` files).
+`docker-spk` is a tool to develop sandstorm packages using Docker to
+build the root filesystems.
 
-Note that an arbitrary Docker image will not work; the filesystem must
-still be constructed to behave correctly inside Sandstorm's sandbox
-environment.
+It is a work in progress, but already supports converting docker images
+to sandstorm packages (`.spk` files), and signing and populating them
+with metadata based on 1sandstorm-pkgdef.capnp`.
+
+Note that it is not possibly to automatically convert an arbitrary
+Docker image and have it work; the filesystem must be constructed to
+behave correctly inside Sandstorm's sandbox environment.
 
 # Building
 
@@ -15,7 +19,7 @@ dep ensure
 go build
 ```
 
-This will create an executable `./docker2spk`.
+This will create an executable `./docker-spk`.
 
 # Quick Start
 
@@ -30,28 +34,20 @@ one from a running Docker daemon:
 docker save my-image > my-image.tar
 ```
 
-Finally, run `docker2spk` to convert the image:
+Finally, run `docker-spk` to convert the image:
 
 ```
-docker2spk -imagefile my-image.tar
+docker-spk -imagefile my-image.tar
 ```
 
 This will create a `my-image.spk` based on the docker image and the
 information in `sandstorm-manifest.capnp`.
 
-```sh
-# Fetch an image from the docker daemon:
-docker save my-image > my-image.tar
-# convert it to an `.spk`. $app_id must be one of the keys
-# output by `spk listkeys`:
-docker2spk my-image.tar -appid $app_id
-```
-
 # Reference
 
 ```
-$ docker2spk -h
-Usage of docker2spk:
+$ docker-spk -h
+Usage of docker-spk:
   -imagefile string
         File containing Docker image to convert (output of "docker save")
   -keyring string

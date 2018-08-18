@@ -1,5 +1,5 @@
 # The executable:
-/docker2spk
+/docker-spk
 
 # Standard go thing: vendor directory.
 vendor
