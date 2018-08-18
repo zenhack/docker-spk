@@ -124,7 +124,7 @@ func main() {
 	flag.Parse()
 
 	if *imageName == "" {
-		usageErr("Missing option: -image")
+		usageErr("Missing option: -imagefile")
 	}
 
 	pkgDefParts := strings.SplitN(*pkgDef, ":", 2)
