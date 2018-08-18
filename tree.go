@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"sort"
 	"zenhack.net/go/sandstorm/capnp/spk"
 )
 
@@ -50,19 +50,25 @@ func (t Tree) ToArchive(dest spk.Archive) error {
 }
 
 func insertDir(dest spk.Archive_File_List, t Tree) error {
-	i := 0
-	for k, v := range t {
-		di := dest.At(i)
-		if err := insertFile(di, k, v); err != nil {
+
+	// For the sake of reproducable builds, we sort the keys.
+	keys := make([]string, 0, len(t))
+	for k, _ := range t {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i] < keys[j]
+	})
+
+	for i, k := range keys {
+		if err := insertFile(dest.At(i), k, t[k]); err != nil {
 			return err
 		}
-		i++
 	}
 	return nil
 }
 
 func insertFile(dest spk.Archive_File, name string, file *File) error {
-	fmt.Println(name)
 	err := dest.SetName(name)
 	if err != nil {
 		return err
