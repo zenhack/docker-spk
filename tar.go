@@ -5,19 +5,6 @@ import (
 	"io"
 )
 
-// Get a reader for the specified file name inside the archive.
-// The reader must not be used after modifying 'r'.
-func getFile(r *tar.Reader, path string) (io.Reader, error) {
-	hdr, err := r.Next()
-	for err == nil {
-		if hdr.Name == path {
-			return r, nil
-		}
-		hdr, err = r.Next()
-	}
-	return nil, err
-}
-
 // Get a tarIterator for the reader.
 func iterTar(r *tar.Reader) *tarIterator {
 	return &tarIterator{r: r}
