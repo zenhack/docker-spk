@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
@@ -106,24 +105,6 @@ func buildTree(abs map[string]*File) (Tree, error) {
 	return root.kids, nil
 }
 
-func printTree(prefix string, t Tree) {
-	fmt.Printf("PrintTree %q\n", prefix)
-	for k, v := range t {
-		fmt.Print(prefix + k)
-		switch {
-		case v.isDir():
-			fmt.Println()
-			printTree(prefix+k+"/", v.kids)
-		case v.data != nil && v.isExe:
-			fmt.Println(": Executable (", len(v.data), ")")
-		case v.data != nil && !v.isExe:
-			fmt.Println(": Regular (", len(v.data), ")")
-		default:
-			fmt.Printf(": Symlink (%q)\n", v.target)
-		}
-	}
-}
-
 func readLayer(r *tar.Reader) (Tree, error) {
 	absMap, err := buildAbsFileMap(r)
 	if err != nil {
@@ -141,14 +122,8 @@ func readDockerImage(r *tar.Reader) (*DockerImage, error) {
 	for it.Next() {
 		cur := it.Cur()
 		if cur.Name == "manifest.json" {
-			fmt.Println("Found manifest")
 			if err := json.NewDecoder(r).Decode(&ret.Manifest); err != nil {
 				return nil, err
-			}
-			for _, v := range ret.Manifest {
-				for _, layer := range v.Layers {
-					fmt.Println(layer)
-				}
 			}
 		} else {
 			if !layerRegexp.Match([]byte(cur.Name)) {
@@ -167,10 +142,8 @@ func readDockerImage(r *tar.Reader) (*DockerImage, error) {
 
 func (di *DockerImage) toTree() (Tree, error) {
 	tree := Tree{}
-	fmt.Println(di)
 	for _, manifest := range di.Manifest {
 		for _, layer := range manifest.Layers {
-			fmt.Printf("New tree.")
 			tree.Merge(di.Layers[layer])
 		}
 	}
