@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -30,9 +31,13 @@ var (
 	keyringPath = flag.String("keyring", "",
 		"Path to sandstorm keyring (default ~/.sandstorm-keyring)",
 	)
-	appId = flag.String("appid", "",
-		"The app id to assign to the package. The private key for this "+
-			"must be available in your sandstorm keyring.",
+
+	pkgDef = flag.String(
+		"pkg-def",
+		"sandstorm-pkgdef.capnp:pkgdef",
+		"The location from which to read the package definition, of the form "+
+			"<def-file>:<name>. <def-file> is the name of the file to look in, "+
+			"and <name> is the name of the constant defining the package definition.",
 	)
 
 	ErrNotADir = errors.New("Not a directory")
@@ -70,29 +75,24 @@ func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest []byte) (s
 	if err != nil {
 		return ret, err
 	}
-	if manifest == nil {
-		fmt.Fprintln(os.Stderr,
-			"Warning: this Docker image does not contain a "+
-				"sandstorm-manifest. The resulting sandstorm package "+
-				"will not function without this!")
-	} else {
-		tree["sandstorm-manifest"] = &File{
-			data: manifest,
-		}
+	tree["sandstorm-manifest"] = &File{
+		data: manifest,
 	}
 	err = tree.ToArchive(ret)
 	return ret, err
 }
 
 // Read in the docker image located at filename, and return the raw bytes of a
-// capnproto message with an equivalent Archive as its root.
-func archiveBytesFromFilename(filename string) []byte {
+// capnproto message with an equivalent Archive as its root. The second argument
+// is the raw bytes of the file "sandstorm-manifest", which will be added to the
+// archive.
+func archiveBytesFromFilename(filename string, manifestBytes []byte) []byte {
 	file, err := os.Open(filename)
 	chkfatal("opening image file", err)
 	defer file.Close()
 	archiveMsg, archiveSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
 	chkfatal("allocating a message", err)
-	archive, err := buildArchive(file, archiveSeg, nil)
+	archive, err := buildArchive(file, archiveSeg, manifestBytes)
 	chkfatal("building the archive", err)
 	err = archiveMsg.SetRoot(archive.Struct.ToPtr())
 	chkfatal("setting root pointer", err)
@@ -115,25 +115,54 @@ func main() {
 		usageErr("Missing option: -image")
 	}
 
+	pkgDefParts := strings.SplitN(*pkgDef, ":", 2)
+	if len(pkgDefParts) != 2 {
+		usageErr("-pkg-def's argument must be of the form <def-file>:<name>")
+	}
+
 	if *keyringPath == "" {
 		// The user didn't specify a keyring; use the default.
 		*keyringPath = os.Getenv("HOME") + "/.sandstorm-keyring"
 	}
 
-	if *appId == "" {
-		usageErr("Missing option: -appid")
-	}
+	tmpDir, err := saveSchemaFiles()
+	chkfatal("Saving temporary schema files", err)
+	pkgDefBytes, err := exec.Command(
+		"capnp", "eval", "--binary", "-I", tmpDir, pkgDefParts[0], pkgDefParts[1],
+	).Output()
+	deleteSchemaFiles(tmpDir)
+	chkfatal("Reading the package definition", err)
+
+	pkgDefMsg, err := capnp.Unmarshal(pkgDefBytes)
+	chkfatal("Parsing the package definition message", err)
+
+	pkgDefVal, err := spk.ReadRootPackageDefinition(pkgDefMsg)
+	chkfatal("Parsing the package definition message struct", err)
+
+	pkgManifest, err := pkgDefVal.Manifest()
+	chkfatal("Reading the package manifest", err)
+
+	appIdStr, err := pkgDefVal.Id()
+	chkfatal("Reading the package's app id", err)
+
+	// We're being a bit lazy here; rather than copy the manifest to a
+	// new message, we just make it the root of the existing message.
+	err = pkgDefMsg.SetRoot(pkgManifest.Struct.ToPtr())
+	chkfatal("Setting the root pointer in the manifest message", err)
+
+	manifestBytes, err := pkgDefMsg.Marshal()
+	chkfatal("Marshalling sandstorm-manifest", err)
 
 	keyring, err := loadKeyring(*keyringPath)
 	chkfatal("loading the sandstorm keyring", err)
 
-	appPubKey, err := SandstormBase32Encoding.DecodeString(*appId)
+	appPubKey, err := SandstormBase32Encoding.DecodeString(appIdStr)
 	chkfatal("Parsing the app id", err)
 
 	appKeyFile, err := keyring.GetKey(appPubKey)
 	chkfatal("Fetching the app private key", err)
 
-	archiveBytes := archiveBytesFromFilename(*imageName)
+	archiveBytes := archiveBytesFromFilename(*imageName, manifestBytes)
 	sigBytes := signatureMessage(appKeyFile, archiveBytes)
 
 	if *outFilename == "" {
