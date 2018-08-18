@@ -7,3 +7,4 @@ vendor
 # Stuff likely to be created when experimenting:
 *.tar
 *.spk
+sandstorm-pkgdef.capnp
