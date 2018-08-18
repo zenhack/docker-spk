@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha512"
 	"errors"
 	"io"
@@ -19,6 +20,29 @@ var (
 
 // The sandstorm keyring, typically stored at ~/.sandstorm-keyring.
 type Keyring []spk.KeyFile
+
+// Generate a new signing key.
+func GenerateKey() (spk.KeyFile, error) {
+	ret := spk.KeyFile{}
+	pubKey, privKey, err := sign.GenerateKey(rand.Reader)
+	if err != nil {
+		return ret, err
+	}
+	_, firstSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
+	if err != nil {
+		return ret, err
+	}
+	ret, err = spk.NewRootKeyFile(firstSeg)
+	if err != nil {
+		return ret, err
+	}
+	err = ret.SetPublicKey(pubKey[:])
+	if err != nil {
+		return ret, err
+	}
+	err = ret.SetPrivateKey(privKey[:])
+	return ret, err
+}
 
 // Get a key from the keyring.
 func (k Keyring) GetKey(targetPubKey []byte) (spk.KeyFile, error) {
