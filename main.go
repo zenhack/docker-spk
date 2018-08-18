@@ -18,10 +18,16 @@ import (
 )
 
 var (
-	// Sandstorm uses a custom base32 alphabet.
+	// Sandstorm uses a custom base32 alphabet when displaying
+	// app-ids/public keys.
 	SandstormBase32Encoding = base32.NewEncoding("0123456789acdefghjkmnpqrstuvwxyz").
 				WithPadding(base32.NoPadding)
 
+	ErrNotADir = errors.New("Not a directory")
+)
+
+// Command line arguments:
+var (
 	imageName = flag.String("imagefile", "",
 		"File containing Docker image to convert (output of \"docker save\")",
 	)
@@ -40,18 +46,20 @@ var (
 			"and <name> is the name of the constant defining the package\n"+
 			"definition.",
 	)
-
-	ErrNotADir = errors.New("Not a directory")
 )
 
+// wrapper around filepath.Dir that also canonicalizes the result.
 func dirname(name string) string {
 	return filepath.Clean(filepath.Dir(name))
 }
 
+// wrapper around filepath.Base that also canonicalizes the result.
 func basename(name string) string {
 	return filepath.Clean(filepath.Base(name))
 }
 
+// If the error is not nil, display an error message to the user based on
+// `context` and `err`, and exit the with a failing status.
 func chkfatal(context string, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", context, err)
@@ -102,6 +110,9 @@ func archiveBytesFromFilename(filename string, manifestBytes []byte) []byte {
 	return bytes
 }
 
+// Report a usage error to the user. Displays the string `info` and the
+// documentation for the command line arguments, and exits with a failing
+// status.
 func usageErr(info string) {
 	fmt.Fprintln(os.Stderr, info)
 	fmt.Fprintln(os.Stderr)
@@ -126,6 +137,10 @@ func main() {
 		*keyringPath = os.Getenv("HOME") + "/.sandstorm-keyring"
 	}
 
+	// Read in the package definition from sandstorm-pkgdef.capnp. The
+	// file will reference some of the .capnp files from Sandstorm, so
+	// we output those to a temporary directory and add it to the include
+	// path for the capnp command.
 	tmpDir, err := saveSchemaFiles()
 	chkfatal("Saving temporary schema files", err)
 	pkgDefBytes, err := exec.Command(
@@ -133,6 +148,11 @@ func main() {
 	).Output()
 	deleteSchemaFiles(tmpDir)
 	chkfatal("Reading the package definition", err)
+
+	// There are two pieces of information we want out of the package definition:
+	//
+	// 1. The app id, which tells us which key to use to sign the package.
+	// 2. The manifest, which we embed in the package's archive.
 
 	pkgDefMsg, err := capnp.Unmarshal(pkgDefBytes)
 	chkfatal("Parsing the package definition message", err)

@@ -5,8 +5,11 @@ import (
 	"zenhack.net/go/sandstorm/capnp/spk"
 )
 
+// A set of files inside of a directory.
 type Tree map[string]*File
 
+// A node in a file system. We store the docker file system in this format
+// between reading the image and converting it to an spk.Archive.
 type File struct {
 	// If this is a directory, the contents of the directory by relative
 	// path. Otherwise, this will be nil.
@@ -22,6 +25,7 @@ type File struct {
 	target string
 }
 
+// Return whether the file is a directory.
 func (f *File) isDir() bool {
 	return f.kids != nil
 }
@@ -40,6 +44,7 @@ func (t Tree) Merge(other Tree) {
 	}
 }
 
+// Convert the tree into an sandstorm pacakge archive.
 func (t Tree) ToArchive(dest spk.Archive) error {
 	files, err := dest.NewFiles(int32(len(t)))
 	if err != nil {
@@ -49,6 +54,8 @@ func (t Tree) ToArchive(dest spk.Archive) error {
 
 }
 
+// Marshal the contents of a directory into an archive. `dest` must
+// already have the correct length.
 func insertDir(dest spk.Archive_File_List, t Tree) error {
 
 	// For the sake of reproducable builds, we sort the keys.
@@ -68,6 +75,7 @@ func insertDir(dest spk.Archive_File_List, t Tree) error {
 	return nil
 }
 
+// Marshal a single file into an archive.
 func insertFile(dest spk.Archive_File, name string, file *File) error {
 	err := dest.SetName(name)
 	if err != nil {

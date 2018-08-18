@@ -20,7 +20,9 @@ var (
 // The sandstorm keyring, typically stored at ~/.sandstorm-keyring.
 type Keyring []spk.KeyFile
 
+// Get a key from the keyring.
 func (k Keyring) GetKey(targetPubKey []byte) (spk.KeyFile, error) {
+	// simple linear search.
 	for _, keyFile := range k {
 		pubKey, err := keyFile.PublicKey()
 		if err != nil {
@@ -33,6 +35,7 @@ func (k Keyring) GetKey(targetPubKey []byte) (spk.KeyFile, error) {
 	return spk.KeyFile{}, ErrKeyNotFound
 }
 
+// Load the sandstorm keyring from a named file.
 func loadKeyring(filename string) (Keyring, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -60,6 +63,9 @@ func loadKeyring(filename string) (Keyring, error) {
 	}
 }
 
+// Compute the signature of a package, given the raw bytes of the archive
+// message. Returns the raw bytes of the signature message. Calls chkfatal
+// if any error occurs.
 func signatureMessage(key spk.KeyFile, archiveBytes []byte) []byte {
 	pubKey, err := key.PublicKey()
 	chkfatal("Accessing public key", err)

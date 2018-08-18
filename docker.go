@@ -9,14 +9,20 @@ import (
 	"regexp"
 )
 
+// An item in the json array in the docker image's manifest.json.
 type DockerManifestItem struct {
 	Config   string
 	RepoTags []string
 	Layers   []string
 }
 
+// Information we need about a docker image.
 type DockerImage struct {
-	Layers   map[string]Tree
+	// The decoded layers of the docker image. The keys are the paths to
+	// the layers' tarballs within the image.
+	Layers map[string]Tree
+
+	// The contents of the docker image's manifest.json
 	Manifest []DockerManifestItem
 }
 
@@ -25,6 +31,10 @@ var layerRegexp = regexp.MustCompile("^[0-9a-f]{64}/layer\\.tar$")
 
 // Convert a tarball into a map from (full) paths to Files. Skips any file
 // that is not a symlink, directory, or regular file.
+//
+// Note that the result is *not* a valid Tree; Trees are hierarchical,
+// this is just a flat map from full paths to Files. Files which are
+// directories do not have their contents populated.
 func buildAbsFileMap(r *tar.Reader) (map[string]*File, error) {
 	it := iterTar(r)
 	ret := map[string]*File{}
@@ -59,8 +69,13 @@ func buildAbsFileMap(r *tar.Reader) (map[string]*File, error) {
 // Adds the parent directory to abs if it does not already exist. An error is
 // returned if abs already contains a file at absPath's parent that is not a
 // directory.
+//
+// `abs` should be the return value from buildAbsFIleMap
 func addRelFile(abs map[string]*File, absPath string) error {
 	if absPath == "." {
+		// The root of the file system (see the documentation
+		// for filepath.Clean). There is no parent directory, so
+		// just return.
 		return nil
 	}
 	file := abs[absPath]
@@ -77,6 +92,7 @@ func addRelFile(abs map[string]*File, absPath string) error {
 	relPath = filepath.Clean(relPath)
 
 	if dirPath != "." {
+		// make sure all our ancestors are present.
 		if err := addRelFile(abs, dirPath); err != nil {
 			return err
 		}
@@ -105,6 +121,7 @@ func buildTree(abs map[string]*File) (Tree, error) {
 	return root.kids, nil
 }
 
+// Unmarshal a layer tarball from within a docker image into a Tree.
 func readLayer(r *tar.Reader) (Tree, error) {
 	absMap, err := buildAbsFileMap(r)
 	if err != nil {
@@ -113,6 +130,7 @@ func readLayer(r *tar.Reader) (Tree, error) {
 	return buildTree(absMap)
 }
 
+// Unmarshal a docker image from a tarball.
 func readDockerImage(r *tar.Reader) (*DockerImage, error) {
 	ret := &DockerImage{
 		Layers:   map[string]Tree{},
@@ -140,6 +158,8 @@ func readDockerImage(r *tar.Reader) (*DockerImage, error) {
 
 }
 
+// Convert the docker image into a tree for the entire filesystem (merging
+// the individual layers).
 func (di *DockerImage) toTree() (Tree, error) {
 	tree := Tree{}
 	for _, manifest := range di.Manifest {

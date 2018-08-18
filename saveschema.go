@@ -5,14 +5,8 @@ import (
 	"os"
 )
 
-func deleteSchemaFiles(path string) {
-	for k, _ := range CapnpFileMap {
-		os.Remove(path + "/sandstorm/" + k)
-	}
-	os.Remove(path + "/sandstorm")
-	os.Remove(path)
-}
-
+// Save the sandstorm schema files in a temporary directory, and return the path
+// to that directory.
 func saveSchemaFiles() (string, error) {
 	path, err := ioutil.TempDir("", "docker-spk-tmp-schema")
 	if err != nil {
@@ -32,4 +26,14 @@ func saveSchemaFiles() (string, error) {
 		}
 	}
 	return path, nil
+}
+
+// Delete the temporary path, and the schema files underneath it (as created
+// by saveSchemaFiles()`.
+func deleteSchemaFiles(path string) {
+	for k, _ := range CapnpFileMap {
+		os.Remove(path + "/sandstorm/" + k)
+	}
+	os.Remove(path + "/sandstorm")
+	os.Remove(path)
 }
