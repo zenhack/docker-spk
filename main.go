@@ -35,9 +35,10 @@ var (
 	pkgDef = flag.String(
 		"pkg-def",
 		"sandstorm-pkgdef.capnp:pkgdef",
-		"The location from which to read the package definition, of the form "+
-			"<def-file>:<name>. <def-file> is the name of the file to look in, "+
-			"and <name> is the name of the constant defining the package definition.",
+		"The location from which to read the package definition, of the form\n"+
+			"<def-file>:<name>. <def-file> is the name of the file to look in,\n"+
+			"and <name> is the name of the constant defining the package\n"+
+			"definition.",
 	)
 
 	ErrNotADir = errors.New("Not a directory")
