@@ -30,9 +30,18 @@ This will create an executable `./docker-spk`.
 
 # Quick Start
 
-First, create a sandstorm-pkgdef.capnp in the current directory.
-Generating this automatically is planned, but for now you can create
-this with spk init (or vagrant-spk init).
+First, generate a sandstorm-pkgdef.capnp in the current directory:
+
+```
+docker-spk init
+```
+
+The tool will automatically generate a keypair for your app, and save it
+in your keyring (by default `~/.sandstorm-keyring`, but this can be
+overridden with the `-keyring` flag).
+
+Edit the file to match your app. In particular, you will want to change
+the command used to launch the app, near the bottom of the file.
 
 Then, get a Docker image to convert. You can use `docker save` to fetch
 one from a running Docker daemon:
@@ -54,11 +63,22 @@ information in `sandstorm-manifest.capnp`.
 
 ```
 $ docker-spk -h
-Usage of docker-spk:
+Usage: docker-spk ( init | pack ) <flags>
+where <flags> =
+  -keyring string
+        Path to sandstorm keyring (default "~/.sandstorm-keyring")
+
+$ docker-spk init -h
+Usage of docker-spk init:
+  -keyring string
+        Path to sandstorm keyring (default "~/.sandstorm-keyring")
+
+$ docker-spk pack -h
+Usage of docker-spk pack:
   -imagefile string
         File containing Docker image to convert (output of "docker save")
   -keyring string
-        Path to sandstorm keyring (default ~/.sandstorm-keyring)
+        Path to sandstorm keyring (default "~/.sandstorm-keyring")
   -out string
         File name of the resulting spk (default inferred from -imagefile)
   -pkg-def string

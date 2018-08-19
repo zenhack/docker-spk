@@ -30,7 +30,7 @@ func main() {
 
 import "text/template"
 
-var PkgDefTmplate = template.Must(template.New("pkgdef").Parse(%q))
+var PkgDefTemplate = template.Must(template.New("pkgdef").Parse(%q))
 `, bytes)
 	chkfatal(err)
 	chkfatal(file.Close())

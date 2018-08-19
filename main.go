@@ -60,10 +60,7 @@ func usageErr(info string) {
 func main() {
 	subCommands := map[string]func(){
 		"pack": packCmd,
-		"init": func() {
-			fmt.Fprintf(os.Stderr, "Unimplemented: init\n")
-			flag.Usage()
-		},
+		"init": initCmd,
 	}
 	flag.Usage = func() {
 		keys := []string{}

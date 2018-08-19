@@ -21,7 +21,7 @@ var (
 // The sandstorm keyring, typically stored at ~/.sandstorm-keyring.
 type Keyring []spk.KeyFile
 
-// Generate a new signing key.
+// Generate a new signing key. It will be the root object of its own message.
 func GenerateKey() (spk.KeyFile, error) {
 	ret := spk.KeyFile{}
 	pubKey, privKey, err := sign.GenerateKey(rand.Reader)

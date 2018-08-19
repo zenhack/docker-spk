@@ -1,4 +1,4 @@
-@0x{{ .SchemaId | printf "%x" }};
+@0x{{ .SchemaId | printf "%016x" }};
 
 using Spk = import "/sandstorm/package.capnp";
 # This imports:
@@ -9,7 +9,7 @@ const pkgdef :Spk.PackageDefinition = (
   # The package definition. Note that the spk tool looks specifically for the
   # "pkgdef" constant.
 
-  id = "{{ .AppId }}"
+  id = "{{ .AppId }}",
   # Your app ID is actually its public key. The private key was placed in
   # your keyring. All updates must be signed with the same key.
 
