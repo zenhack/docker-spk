@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
@@ -57,5 +58,44 @@ func usageErr(info string) {
 }
 
 func main() {
-	packCmd()
+	subCommands := map[string]func(){
+		"pack": packCmd,
+		"init": func() {
+			fmt.Fprintf(os.Stderr, "Unimplemented: init\n")
+			flag.Usage()
+		},
+	}
+	flag.Usage = func() {
+		keys := []string{}
+		for k, _ := range subCommands {
+			keys = append(keys, k)
+		}
+		fmt.Fprintf(os.Stderr,
+			"Usage: %s ( %s ) <flags>\n"+
+				"where <flags> =\n",
+			os.Args[0],
+			strings.Join(keys, " | "),
+		)
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+	cmd := os.Args[1]
+	fn, ok := subCommands[cmd]
+	if ok {
+		arg0 := os.Args[0]
+		// We have to chop of the subcommand or the parser gets confused later:
+		os.Args = os.Args[1:]
+		flag.Usage = func() {
+			fmt.Fprintf(os.Stderr, "Usage of %s %s:\n", arg0, cmd)
+			flag.PrintDefaults()
+		}
+		fn()
+		return
+	}
+	switch cmd {
+	case "-h", "-help", "--help", "help":
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown subcommand: %s\n", os.Args[1])
+	}
+	flag.Usage()
 }

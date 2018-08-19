@@ -41,10 +41,10 @@ one from a running Docker daemon:
 docker save my-image > my-image.tar
 ```
 
-Finally, run `docker-spk` to convert the image:
+Finally, run `docker-spk pack` to convert the image:
 
 ```
-docker-spk -imagefile my-image.tar
+docker-spk pack -imagefile my-image.tar
 ```
 
 This will create a `my-image.spk` based on the docker image and the
