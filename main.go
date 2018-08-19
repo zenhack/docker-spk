@@ -20,23 +20,10 @@ var (
 
 // Command line arguments:
 var (
-	imageName = flag.String("imagefile", "",
-		"File containing Docker image to convert (output of \"docker save\")",
-	)
-	outFilename = flag.String("out", "",
-		"File name of the resulting spk (default inferred from -imagefile)",
-	)
-	keyringPath = flag.String("keyring", "",
-		"Path to sandstorm keyring (default ~/.sandstorm-keyring)",
-	)
-
-	pkgDef = flag.String(
-		"pkg-def",
-		"sandstorm-pkgdef.capnp:pkgdef",
-		"The location from which to read the package definition, of the form\n"+
-			"<def-file>:<name>. <def-file> is the name of the file to look in,\n"+
-			"and <name> is the name of the constant defining the package\n"+
-			"definition.",
+	keyringPath = flag.String(
+		"keyring",
+		os.Getenv("HOME")+"/.sandstorm-keyring",
+		"Path to sandstorm keyring",
 	)
 )
 
@@ -70,6 +57,5 @@ func usageErr(info string) {
 }
 
 func main() {
-	flag.Parse()
 	packCmd()
 }

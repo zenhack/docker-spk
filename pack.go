@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/tar"
+	"flag"
 	"io"
 	"os"
 	"os/exec"
@@ -55,6 +56,22 @@ func archiveBytesFromFilename(filename string, manifestBytes, bridgeCfgBytes []b
 }
 
 func packCmd() {
+	pkgDef := flag.String(
+		"pkg-def",
+		"sandstorm-pkgdef.capnp:pkgdef",
+		"The location from which to read the package definition, of the form\n"+
+			"<def-file>:<name>. <def-file> is the name of the file to look in,\n"+
+			"and <name> is the name of the constant defining the package\n"+
+			"definition.",
+	)
+	imageName := flag.String("imagefile", "",
+		"File containing Docker image to convert (output of \"docker save\")",
+	)
+	outFilename := flag.String("out", "",
+		"File name of the resulting spk (default inferred from -imagefile)",
+	)
+	flag.Parse()
+
 	if *imageName == "" {
 		usageErr("Missing option: -imagefile")
 	}
@@ -62,11 +79,6 @@ func packCmd() {
 	pkgDefParts := strings.SplitN(*pkgDef, ":", 2)
 	if len(pkgDefParts) != 2 {
 		usageErr("-pkg-def's argument must be of the form <def-file>:<name>")
-	}
-
-	if *keyringPath == "" {
-		// The user didn't specify a keyring; use the default.
-		*keyringPath = os.Getenv("HOME") + "/.sandstorm-keyring"
 	}
 
 	// Read in the package definition from sandstorm-pkgdef.capnp. The
