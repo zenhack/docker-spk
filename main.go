@@ -71,7 +71,7 @@ func chkfatal(context string, err error) {
 // (and definitely allocating in the same message). The resulting archive
 // is an orphan inside the message; it must be attached somewhere for it
 // to be reachable.
-func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest []byte) (spk.Archive, error) {
+func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg []byte) (spk.Archive, error) {
 	ret, err := spk.NewArchive(seg)
 	if err != nil {
 		return ret, err
@@ -84,9 +84,8 @@ func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest []byte) (s
 	if err != nil {
 		return ret, err
 	}
-	tree["sandstorm-manifest"] = &File{
-		data: manifest,
-	}
+	tree["sandstorm-manifest"] = &File{data: manifest}
+	tree["sandstorm-http-bridge-config"] = &File{data: bridgeCfg}
 	err = tree.ToArchive(ret)
 	return ret, err
 }
@@ -95,13 +94,13 @@ func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest []byte) (s
 // capnproto message with an equivalent Archive as its root. The second argument
 // is the raw bytes of the file "sandstorm-manifest", which will be added to the
 // archive.
-func archiveBytesFromFilename(filename string, manifestBytes []byte) []byte {
+func archiveBytesFromFilename(filename string, manifestBytes, bridgeCfgBytes []byte) []byte {
 	file, err := os.Open(filename)
 	chkfatal("opening image file", err)
 	defer file.Close()
 	archiveMsg, archiveSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
 	chkfatal("allocating a message", err)
-	archive, err := buildArchive(file, archiveSeg, manifestBytes)
+	archive, err := buildArchive(file, archiveSeg, manifestBytes, bridgeCfgBytes)
 	chkfatal("building the archive", err)
 	err = archiveMsg.SetRoot(archive.Struct.ToPtr())
 	chkfatal("setting root pointer", err)
@@ -166,6 +165,10 @@ func main() {
 	appIdStr, err := pkgDefVal.Id()
 	chkfatal("Reading the package's app id", err)
 
+	bridgeCfg, err := pkgDefVal.BridgeConfig()
+	chkfatal("Reading the bridge config", err)
+
+	// Generate the contents of the file /sandstorm-manifest
 	manifestMsg, manifestSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
 	chkfatal("Allocating a message for the manifest", err)
 	rootManifest, err := capnp.NewRootStruct(manifestSeg, pkgManifest.Struct.Size())
@@ -173,6 +176,15 @@ func main() {
 	chkfatal("Copying manifest", rootManifest.CopyFrom(pkgManifest.Struct))
 	manifestBytes, err := manifestMsg.Marshal()
 	chkfatal("Marshalling sandstorm-manifest", err)
+
+	// Generate the contents of the file /sandstorm-http-bridge-config
+	bridgeCfgMsg, bridgeCfgSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
+	chkfatal("Allocating a message for the bridge config", err)
+	rootCfg, err := capnp.NewRootStruct(bridgeCfgSeg, bridgeCfg.Struct.Size())
+	chkfatal("Allocating the root object for the bridge config", err)
+	chkfatal("Copying bridgeCfg", rootCfg.CopyFrom(bridgeCfg.Struct))
+	bridgeCfgBytes, err := bridgeCfgMsg.Marshal()
+	chkfatal("Marshalling sandstorm-bridgeCfg", err)
 
 	keyring, err := loadKeyring(*keyringPath)
 	chkfatal("loading the sandstorm keyring", err)
@@ -183,7 +195,7 @@ func main() {
 	appKeyFile, err := keyring.GetKey(appPubKey)
 	chkfatal("Fetching the app private key", err)
 
-	archiveBytes := archiveBytesFromFilename(*imageName, manifestBytes)
+	archiveBytes := archiveBytesFromFilename(*imageName, manifestBytes, bridgeCfgBytes)
 	sigBytes := signatureMessage(appKeyFile, archiveBytes)
 
 	if *outFilename == "" {
