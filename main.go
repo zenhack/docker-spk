@@ -166,12 +166,12 @@ func main() {
 	appIdStr, err := pkgDefVal.Id()
 	chkfatal("Reading the package's app id", err)
 
-	// We're being a bit lazy here; rather than copy the manifest to a
-	// new message, we just make it the root of the existing message.
-	err = pkgDefMsg.SetRoot(pkgManifest.Struct.ToPtr())
-	chkfatal("Setting the root pointer in the manifest message", err)
-
-	manifestBytes, err := pkgDefMsg.Marshal()
+	manifestMsg, manifestSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
+	chkfatal("Allocating a message for the manifest", err)
+	rootManifest, err := capnp.NewRootStruct(manifestSeg, pkgManifest.Struct.Size())
+	chkfatal("Allocating the root object for the manifest", err)
+	chkfatal("Copying manifest", rootManifest.CopyFrom(pkgManifest.Struct))
+	manifestBytes, err := manifestMsg.Marshal()
 	chkfatal("Marshalling sandstorm-manifest", err)
 
 	keyring, err := loadKeyring(*keyringPath)
