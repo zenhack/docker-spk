@@ -5,9 +5,16 @@ It is a work in progress, but already supports converting docker images
 to sandstorm packages (`.spk` files), and signing and populating them
 with metadata based on `sandstorm-pkgdef.capnp`.
 
-Note that it is not possibly to automatically convert an arbitrary
-Docker image and have it work; the filesystem must be constructed to
-behave correctly inside Sandstorm's sandbox environment.
+Note that:
+
+* It is not possible to automatically convert an arbitrary Docker image
+  and have it work; the filesystem must be constructed to behave
+  correctly inside Sandstorm's sandbox environment.
+* Docker is only used to build the root filesystem of the app.
+  Accordingly, Dockerfile instructions like `CMD`, `EXPOSE`,
+  `STOPSIGNAL`, etc, which do not modify the image's filesystem, have
+  no effect on the app. For other forms of customization, edit
+  `sandstorm-pkgdef.capnp`.
 
 # Building
 
