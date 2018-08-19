@@ -1,17 +1,12 @@
 package main
 
 import (
-	"archive/tar"
 	"encoding/base32"
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-
-	"zenhack.net/go/sandstorm/capnp/spk"
-	"zombiezen.com/go/capnproto2"
 )
 
 var (
@@ -62,48 +57,6 @@ func chkfatal(context string, err error) {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", context, err)
 		os.Exit(1)
 	}
-}
-
-// Build an archive from the docker image, preferring allocation in `seg`
-// (and definitely allocating in the same message). The resulting archive
-// is an orphan inside the message; it must be attached somewhere for it
-// to be reachable.
-func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg []byte) (spk.Archive, error) {
-	ret, err := spk.NewArchive(seg)
-	if err != nil {
-		return ret, err
-	}
-	img, err := readDockerImage(tar.NewReader(dockerImage))
-	if err != nil {
-		return ret, err
-	}
-	tree, err := img.toTree()
-	if err != nil {
-		return ret, err
-	}
-	tree["sandstorm-manifest"] = &File{data: manifest}
-	tree["sandstorm-http-bridge-config"] = &File{data: bridgeCfg}
-	err = tree.ToArchive(ret)
-	return ret, err
-}
-
-// Read in the docker image located at filename, and return the raw bytes of a
-// capnproto message with an equivalent Archive as its root. The second argument
-// is the raw bytes of the file "sandstorm-manifest", which will be added to the
-// archive.
-func archiveBytesFromFilename(filename string, manifestBytes, bridgeCfgBytes []byte) []byte {
-	file, err := os.Open(filename)
-	chkfatal("opening image file", err)
-	defer file.Close()
-	archiveMsg, archiveSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
-	chkfatal("allocating a message", err)
-	archive, err := buildArchive(file, archiveSeg, manifestBytes, bridgeCfgBytes)
-	chkfatal("building the archive", err)
-	err = archiveMsg.SetRoot(archive.Struct.ToPtr())
-	chkfatal("setting root pointer", err)
-	bytes, err := archiveMsg.Marshal()
-	chkfatal("marshalling archive message", err)
-	return bytes
 }
 
 // Report a usage error to the user. Displays the string `info` and the
