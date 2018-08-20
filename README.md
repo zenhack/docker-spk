@@ -80,6 +80,11 @@ Usage of docker-spk init:
 
 $ docker-spk pack -h
 Usage of docker-spk pack:
+  -appkey string
+        Sign the package with the specified app key, instead of the one
+        defined in the package definition. This can be useful if e.g.
+        you do not have access to the key with which the final app is
+        published.
   -imagefile string
         File containing Docker image to convert (output of "docker save")
   -keyring string

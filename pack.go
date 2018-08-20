@@ -77,6 +77,11 @@ func packCmd() {
 	outFilename := flag.String("out", "",
 		"File name of the resulting spk (default inferred from -imagefile)",
 	)
+	altAppKey := flag.String("appkey", "",
+		"Sign the package with the specified app key, instead of the one\n"+
+			"defined in the package definition. This can be useful if e.g.\n"+
+			"you do not have access to the key with which the final app is\n"+
+			"published.")
 	flag.Parse()
 
 	if *imageName == "" {
@@ -140,6 +145,11 @@ func packCmd() {
 
 	keyring, err := loadKeyring(*keyringPath)
 	chkfatal("loading the sandstorm keyring", err)
+
+	if *altAppKey != "" {
+		// The user has requested we use a different key.
+		appIdStr = *altAppKey
+	}
 
 	appPubKey, err := SandstormBase32Encoding.DecodeString(appIdStr)
 	chkfatal("Parsing the app id", err)
