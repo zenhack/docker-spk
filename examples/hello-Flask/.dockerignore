@@ -1,0 +1,5 @@
+Dockerfile
+sandstorm-pkgdef.capnp
+.dockerignore
+*.tar
+*.spk

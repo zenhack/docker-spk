@@ -59,6 +59,11 @@ docker-spk pack -imagefile my-image.tar
 This will create a `my-image.spk` based on the docker image and the
 information in `sandstorm-manifest.capnp`.
 
+# Examples
+
+The `examples/` directory contains some examples that may be useful in
+seeing how to package apps with `docker-spk`.
+
 # Reference
 
 ```
