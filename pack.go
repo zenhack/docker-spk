@@ -30,8 +30,15 @@ func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg
 	if err != nil {
 		return ret, err
 	}
+
+	// Add sandstorm metadata to the package:
 	tree["sandstorm-manifest"] = &File{data: manifest}
 	tree["sandstorm-http-bridge-config"] = &File{data: bridgeCfg}
+
+	// Remove /var, since sandstorm won't make it available anyway. This
+	// can make images a bit smaller, since often stuff gets left there.
+	delete(tree, "var")
+
 	err = tree.ToArchive(ret)
 	return ret, err
 }
