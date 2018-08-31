@@ -56,8 +56,8 @@ Finally, run `docker-spk pack` to convert the image:
 docker-spk pack -imagefile my-image.tar
 ```
 
-This will create a `my-image.spk` based on the docker image and the
-information in `sandstorm-manifest.capnp`.
+This will create an `.spk` file, with the name derived from the app name
+and version defined in `sandstorm-manifest.capnp`.
 
 # Examples
 
@@ -90,7 +90,7 @@ Usage of docker-spk pack:
   -keyring string
         Path to sandstorm keyring (default "~/.sandstorm-keyring")
   -out string
-        File name of the resulting spk (default inferred from -imagefile)
+        File name of the resulting spk (default inferred from package metadata)
   -pkg-def string
         The location from which to read the package definition, of the form
         <def-file>:<name>. <def-file> is the name of the file to look in,
