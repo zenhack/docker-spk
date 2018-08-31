@@ -4,7 +4,7 @@
 
 FROM alpine:3.8 as builder
 
-ENV SANDSTORM_VERSION=237
+ENV SANDSTORM_VERSION=238
 
 # For strip:
 RUN apk add binutils
