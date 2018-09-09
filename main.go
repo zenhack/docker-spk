@@ -76,6 +76,9 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
+	if len(os.Args) < 2 {
+		flag.Usage()
+	}
 	cmd := os.Args[1]
 	fn, ok := subCommands[cmd]
 	if ok {
