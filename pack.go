@@ -5,6 +5,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/ulikunitz/xz"
@@ -50,9 +51,25 @@ func archiveBytesFromFilename(filename string, manifestBytes, bridgeCfgBytes []b
 	file, err := os.Open(filename)
 	chkfatal("opening image file", err)
 	defer file.Close()
+	return archiveBytesFromReader(file, manifestBytes, bridgeCfgBytes)
+}
+
+func archiveBytesFromDocker(image string, mainfestBytes, bridgeCfgBytes []byte) []byte {
+	cmd := exec.Command("docker", "save", image)
+	stdout, err := cmd.StdoutPipe()
+	chkfatal("Getting standard output from docker save", err)
+	defer stdout.Close()
+	chkfatal("Starting docker save", cmd.Start())
+	defer func() {
+		chkfatal("Waiting for docker save", cmd.Wait())
+	}()
+	return archiveBytesFromReader(stdout, mainfestBytes, bridgeCfgBytes)
+}
+
+func archiveBytesFromReader(r io.Reader, manifestBytes, bridgeCfgBytes []byte) []byte {
 	archiveMsg, archiveSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
 	chkfatal("allocating a message", err)
-	archive, err := buildArchive(file, archiveSeg, manifestBytes, bridgeCfgBytes)
+	archive, err := buildArchive(r, archiveSeg, manifestBytes, bridgeCfgBytes)
 	chkfatal("building the archive", err)
 	err = archiveMsg.SetRoot(archive.Struct.ToPtr())
 	chkfatal("setting root pointer", err)
@@ -70,8 +87,11 @@ func packCmd() {
 			"and <name> is the name of the constant defining the package\n"+
 			"definition.",
 	)
-	imageName := flag.String("imagefile", "",
+	imageFile := flag.String("imagefile", "",
 		"File containing Docker image to convert (output of \"docker save\")",
+	)
+	image := flag.String("image", "",
+		"Name of the image to convert (fetched from the running docker daemon).",
 	)
 	outFilename := flag.String("out", "",
 		"File name of the resulting spk (default inferred from package metadata)",
@@ -83,8 +103,11 @@ func packCmd() {
 			"published.")
 	flag.Parse()
 
-	if *imageName == "" {
-		usageErr("Missing option: -imagefile")
+	if *imageFile == "" && *image == "" {
+		usageErr("Missing option: -image or -imagefile")
+	}
+	if *imageFile != "" && *image != "" {
+		usageErr("Only one of -image or -imagefile may be specified.")
 	}
 
 	pkgDefParts := strings.SplitN(*pkgDef, ":", 2)
@@ -108,7 +131,14 @@ func packCmd() {
 	appKeyFile, err := keyring.GetKey(appPubKey)
 	chkfatal("Fetching the app private key", err)
 
-	archiveBytes := archiveBytesFromFilename(*imageName, metadata.manifest, metadata.bridgeCfg)
+	var archiveBytes []byte
+	if *imageFile != "" {
+		archiveBytes = archiveBytesFromFilename(*imageFile, metadata.manifest, metadata.bridgeCfg)
+	} else if *image != "" {
+		archiveBytes = archiveBytesFromDocker(*image, metadata.manifest, metadata.bridgeCfg)
+	} else {
+		panic("impossible")
+	}
 	sigBytes := signatureMessage(appKeyFile, archiveBytes)
 
 	if *outFilename == "" {

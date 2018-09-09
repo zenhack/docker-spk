@@ -43,21 +43,25 @@ overridden with the `-keyring` flag).
 Edit the file to match your app. In particular, you will want to change
 the command used to launch the app, near the bottom of the file.
 
-Then, get a Docker image to convert. You can use `docker save` to fetch
-one from a running Docker daemon:
+Then, get a Docker image to convert. Invoke:
 
 ```
-docker save my-image > my-image.tar
+docker-spk pack -image <image-name>
 ```
 
-Finally, run `docker-spk pack` to convert the image:
-
-```
-docker-spk pack -imagefile my-image.tar
-```
+...to use the image `<image-name>`, fetched from a running Docker
+daemon.
 
 This will create an `.spk` file, with the name derived from the app name
 and version defined in `sandstorm-manifest.capnp`.
+
+You can also use `docker save` to fetch the image manually and specify
+the file name via `-imagefile`:
+
+```
+docker save my-image > my-image.tar
+docker-spk pack -imagefile my-image.tar
+```
 
 # Examples
 
@@ -66,37 +70,8 @@ seeing how to package apps with `docker-spk`.
 
 # Reference
 
-```
-$ docker-spk -h
-Usage: docker-spk ( init | pack ) <flags>
-where <flags> =
-  -keyring string
-        Path to sandstorm keyring (default "~/.sandstorm-keyring")
 
-$ docker-spk init -h
-Usage of docker-spk init:
-  -keyring string
-        Path to sandstorm keyring (default "~/.sandstorm-keyring")
-
-$ docker-spk pack -h
-Usage of docker-spk pack:
-  -appkey string
-        Sign the package with the specified app key, instead of the one
-        defined in the package definition. This can be useful if e.g.
-        you do not have access to the key with which the final app is
-        published.
-  -imagefile string
-        File containing Docker image to convert (output of "docker save")
-  -keyring string
-        Path to sandstorm keyring (default "~/.sandstorm-keyring")
-  -out string
-        File name of the resulting spk (default inferred from package metadata)
-  -pkg-def string
-        The location from which to read the package definition, of the form
-        <def-file>:<name>. <def-file> is the name of the file to look in,
-        and <name> is the name of the constant defining the package
-        definition. (default "sandstorm-pkgdef.capnp:pkgdef")
-```
+See `docker-spk -h`.
 
 # License
 
