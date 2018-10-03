@@ -1,6 +1,1 @@
-# Same stuff as in .gitignore
-/docker-spk
-/docker-spk-binaries
-vendor
-*.tar
-*.spk
+.gitignore
