@@ -1,6 +1,9 @@
 # The executable:
 /docker-spk
 
+# output directory for tarball built by ./Dockerfile:
+/docker-spk-binaries
+
 # Standard go thing: vendor directory.
 vendor
 
