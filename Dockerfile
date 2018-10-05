@@ -7,7 +7,7 @@
 #
 # If all goes well, the last line of the output should say:
 #
-# Successfully build $hash
+# Successfully built $hash
 #
 # Where $hash is some hash identifying the image. You can then
 # extract the executables from the image by running:
