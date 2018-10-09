@@ -9,4 +9,5 @@ vendor
 
 # Stuff likely to be created when experimenting:
 *.tar
+*.tar.*
 *.spk
