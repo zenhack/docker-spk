@@ -112,7 +112,10 @@ func packCmd() {
 	pFlags := &packFlags{}
 	pFlags.Register()
 	pFlags.Parse()
+	doPack(pFlags)
+}
 
+func doPack(pFlags *packFlags) {
 	metadata := getPkgMetadata(pFlags.pkgDefFile, pFlags.pkgDefVar)
 
 	keyring, err := loadKeyring(*keyringPath)

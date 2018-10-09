@@ -59,8 +59,9 @@ func usageErr(info string) {
 
 func main() {
 	subCommands := map[string]func(){
-		"pack": packCmd,
-		"init": initCmd,
+		"pack":  packCmd,
+		"init":  initCmd,
+		"build": buildCmd,
 	}
 	flag.Usage = func() {
 		keys := []string{}

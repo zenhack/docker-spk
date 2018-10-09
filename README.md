@@ -43,7 +43,19 @@ overridden with the `-keyring` flag).
 Edit the file to match your app. In particular, you will want to change
 the command used to launch the app, near the bottom of the file.
 
-Then, get a Docker image to convert. Invoke:
+Then, create a `Dockerfile` in the current directory, which will be
+responsible for building the filesystem for your app. Finally, from the
+directory containing `Dockerfile` and `sandstorm-pkgdef.capnp`, run:
+
+```
+docker-spk build
+```
+
+This will build the docker image and then package it into a `.spk` file.
+with the name derived from the app name and version defined in
+`sandstorm-manifest.capnp`.
+
+Alternatively, you can package an already-built docker image:
 
 ```
 docker-spk pack -image <image-name>
@@ -52,8 +64,7 @@ docker-spk pack -image <image-name>
 ...to use the image `<image-name>`, fetched from a running Docker
 daemon.
 
-This will create an `.spk` file, with the name derived from the app name
-and version defined in `sandstorm-manifest.capnp`.
+This will skip the build step and just create the `.spk`.
 
 You can also use `docker save` to fetch the image manually and specify
 the file name via `-imagefile`:
@@ -69,7 +80,6 @@ The `examples/` directory contains some examples that may be useful in
 seeing how to package apps with `docker-spk`.
 
 # Reference
-
 
 See `docker-spk -h`.
 

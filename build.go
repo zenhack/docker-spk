@@ -1,7 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"regexp"
 	"strings"
 )
 
@@ -44,6 +49,39 @@ func (f *buildFlags) Parse() {
 	f.pkgDefVar = pkgDefParts[1]
 }
 
-func buildCmd() {
+var buildOkRegexp = regexp.MustCompile("Successfully built ([0-9a-fA-F]+)")
 
+func buildCmd() {
+	bFlags := &buildFlags{}
+	bFlags.Register()
+	bFlags.Parse()
+
+	cmd := exec.Command("docker", "build", ".")
+	cmd.Stderr = os.Stderr
+	out, err := cmd.StdoutPipe()
+	chkfatal("Creating pipe for docker build", err)
+	chkfatal("Starting docker build", cmd.Start())
+	r := bufio.NewScanner(out)
+
+	image := ""
+	for r.Scan() {
+		line := r.Text()
+		fmt.Println(line)
+		subs := buildOkRegexp.FindStringSubmatch(line)
+		if subs != nil && len(subs) == 2 {
+			image = subs[1]
+		}
+	}
+	chkfatal("Parsing output from docker build", err)
+	chkfatal("Problem invoking docker build", cmd.Wait())
+	if image == "" {
+		fmt.Fprintln(os.Stderr,
+			"Could not determine image id built by docker build.")
+		os.Exit(1)
+	}
+
+	doPack(&packFlags{
+		buildFlags: *bFlags,
+		image:      image,
+	})
 }
