@@ -81,49 +81,51 @@ func archiveBytesFromReader(r io.Reader, manifestBytes, bridgeCfgBytes []byte) [
 // Flags for the pack subcommand.
 type packFlags struct {
 	// The flags proper:
-	pkgDef, imageFile, image, outFilename, altAppKey *string
+	pkgDef, imageFile, image, outFilename, altAppKey string
 
 	// The two logical parts of pkgDef:
 	pkgDefFile, pkgDefVar string
 }
 
-func registerPackFlags() *packFlags {
-	return &packFlags{
-		pkgDef: flag.String(
-			"pkg-def",
-			"sandstorm-pkgdef.capnp:pkgdef",
-			"The location from which to read the package definition, of the form\n"+
-				"<def-file>:<name>. <def-file> is the name of the file to look in,\n"+
-				"and <name> is the name of the constant defining the package\n"+
-				"definition.",
-		),
-		imageFile: flag.String("imagefile", "",
-			"File containing Docker image to convert (output of \"docker save\")",
-		),
-		image: flag.String("image", "",
-			"Name of the image to convert (fetched from the running docker daemon).",
-		),
-		outFilename: flag.String("out", "",
-			"File name of the resulting spk (default inferred from package metadata)",
-		),
-		altAppKey: flag.String("appkey", "",
-			"Sign the package with the specified app key, instead of the one\n"+
-				"defined in the package definition. This can be useful if e.g.\n"+
-				"you do not have access to the key with which the final app is\n"+
-				"published."),
-	}
+func (p *packFlags) Register() {
+	flag.StringVar(&p.pkgDef,
+		"pkg-def",
+		"sandstorm-pkgdef.capnp:pkgdef",
+		"The location from which to read the package definition, of the form\n"+
+			"<def-file>:<name>. <def-file> is the name of the file to look in,\n"+
+			"and <name> is the name of the constant defining the package\n"+
+			"definition.",
+	)
+	flag.StringVar(&p.imageFile,
+		"imagefile", "",
+		"File containing Docker image to convert (output of \"docker save\")",
+	)
+	flag.StringVar(&p.image,
+		"image", "",
+		"Name of the image to convert (fetched from the running docker daemon).",
+	)
+	flag.StringVar(&p.outFilename,
+		"out", "",
+		"File name of the resulting spk (default inferred from package metadata)",
+	)
+	flag.StringVar(&p.altAppKey,
+		"appkey", "",
+		"Sign the package with the specified app key, instead of the one\n"+
+			"defined in the package definition. This can be useful if e.g.\n"+
+			"you do not have access to the key with which the final app is\n"+
+			"published.")
 }
 
 func (p *packFlags) Parse() {
 	flag.Parse()
-	if *p.imageFile == "" && *p.image == "" {
+	if p.imageFile == "" && p.image == "" {
 		usageErr("Missing option: -image or -imagefile")
 	}
-	if *p.imageFile != "" && *p.image != "" {
+	if p.imageFile != "" && p.image != "" {
 		usageErr("Only one of -image or -imagefile may be specified.")
 	}
 
-	pkgDefParts := strings.SplitN(*p.pkgDef, ":", 2)
+	pkgDefParts := strings.SplitN(p.pkgDef, ":", 2)
 	if len(pkgDefParts) != 2 {
 		usageErr("-pkg-def's argument must be of the form <def-file>:<name>")
 	}
@@ -132,7 +134,8 @@ func (p *packFlags) Parse() {
 }
 
 func packCmd() {
-	pFlags := registerPackFlags()
+	pFlags := &packFlags{}
+	pFlags.Register()
 	pFlags.Parse()
 
 	metadata := getPkgMetadata(pFlags.pkgDefFile, pFlags.pkgDefVar)
@@ -140,9 +143,9 @@ func packCmd() {
 	keyring, err := loadKeyring(*keyringPath)
 	chkfatal("loading the sandstorm keyring", err)
 
-	if *pFlags.altAppKey != "" {
+	if pFlags.altAppKey != "" {
 		// The user has requested we use a different key.
-		metadata.appId = *pFlags.altAppKey
+		metadata.appId = pFlags.altAppKey
 	}
 
 	appPubKey, err := SandstormBase32Encoding.DecodeString(metadata.appId)
@@ -152,22 +155,22 @@ func packCmd() {
 	chkfatal("Fetching the app private key", err)
 
 	var archiveBytes []byte
-	if *pFlags.imageFile != "" {
-		archiveBytes = archiveBytesFromFilename(*pFlags.imageFile, metadata.manifest, metadata.bridgeCfg)
-	} else if *pFlags.image != "" {
-		archiveBytes = archiveBytesFromDocker(*pFlags.image, metadata.manifest, metadata.bridgeCfg)
+	if pFlags.imageFile != "" {
+		archiveBytes = archiveBytesFromFilename(pFlags.imageFile, metadata.manifest, metadata.bridgeCfg)
+	} else if pFlags.image != "" {
+		archiveBytes = archiveBytesFromDocker(pFlags.image, metadata.manifest, metadata.bridgeCfg)
 	} else {
 		// pFlags.Parse() should have ruled this out.
 		panic("impossible")
 	}
 	sigBytes := signatureMessage(appKeyFile, archiveBytes)
 
-	if *pFlags.outFilename == "" {
+	if pFlags.outFilename == "" {
 		// infer output file from app metadata:
-		*pFlags.outFilename = metadata.name + "-" + metadata.version + ".spk"
+		pFlags.outFilename = metadata.name + "-" + metadata.version + ".spk"
 	}
 
-	outFile, err := os.Create(*pFlags.outFilename)
+	outFile, err := os.Create(pFlags.outFilename)
 	chkfatal("opening output file", err)
 	defer outFile.Close()
 
