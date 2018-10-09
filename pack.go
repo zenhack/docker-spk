@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/ulikunitz/xz"
 	"zenhack.net/go/sandstorm/capnp/spk"
@@ -80,57 +79,33 @@ func archiveBytesFromReader(r io.Reader, manifestBytes, bridgeCfgBytes []byte) [
 
 // Flags for the pack subcommand.
 type packFlags struct {
-	// The flags proper:
-	pkgDef, imageFile, image, outFilename, altAppKey string
+	// flags shared with the build command:
+	buildFlags
 
-	// The two logical parts of pkgDef:
-	pkgDefFile, pkgDefVar string
+	// other flags:
+	imageFile, image string
 }
 
-func (p *packFlags) Register() {
-	flag.StringVar(&p.pkgDef,
-		"pkg-def",
-		"sandstorm-pkgdef.capnp:pkgdef",
-		"The location from which to read the package definition, of the form\n"+
-			"<def-file>:<name>. <def-file> is the name of the file to look in,\n"+
-			"and <name> is the name of the constant defining the package\n"+
-			"definition.",
-	)
-	flag.StringVar(&p.imageFile,
+func (f *packFlags) Register() {
+	f.buildFlags.Register()
+	flag.StringVar(&f.imageFile,
 		"imagefile", "",
 		"File containing Docker image to convert (output of \"docker save\")",
 	)
-	flag.StringVar(&p.image,
+	flag.StringVar(&f.image,
 		"image", "",
 		"Name of the image to convert (fetched from the running docker daemon).",
 	)
-	flag.StringVar(&p.outFilename,
-		"out", "",
-		"File name of the resulting spk (default inferred from package metadata)",
-	)
-	flag.StringVar(&p.altAppKey,
-		"appkey", "",
-		"Sign the package with the specified app key, instead of the one\n"+
-			"defined in the package definition. This can be useful if e.g.\n"+
-			"you do not have access to the key with which the final app is\n"+
-			"published.")
 }
 
-func (p *packFlags) Parse() {
-	flag.Parse()
-	if p.imageFile == "" && p.image == "" {
+func (f *packFlags) Parse() {
+	f.buildFlags.Parse()
+	if f.imageFile == "" && f.image == "" {
 		usageErr("Missing option: -image or -imagefile")
 	}
-	if p.imageFile != "" && p.image != "" {
+	if f.imageFile != "" && f.image != "" {
 		usageErr("Only one of -image or -imagefile may be specified.")
 	}
-
-	pkgDefParts := strings.SplitN(p.pkgDef, ":", 2)
-	if len(pkgDefParts) != 2 {
-		usageErr("-pkg-def's argument must be of the form <def-file>:<name>")
-	}
-	p.pkgDefFile = pkgDefParts[0]
-	p.pkgDefVar = pkgDefParts[1]
 }
 
 func packCmd() {
