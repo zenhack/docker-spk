@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"os"
 	"os/exec"
 
 	"zenhack.net/go/sandstorm/capnp/spk"
@@ -19,10 +21,16 @@ func getPkgMetadata(pkgDefFile, pkgDefVar string) *pkgMetadata {
 	// path for the capnp command.
 	tmpDir, err := saveSchemaFiles()
 	chkfatal("Saving temporary schema files", err)
-	pkgDefBytes, err := exec.Command(
+	cmd := exec.Command(
 		"capnp", "eval", "--binary", "-I", tmpDir, pkgDefFile, pkgDefVar,
-	).Output()
+	)
+	stderrBuf := &bytes.Buffer{}
+	cmd.Stderr = stderrBuf
+	pkgDefBytes, err := cmd.Output()
 	deleteSchemaFiles(tmpDir)
+	if err != nil {
+		os.Stderr.Write(stderrBuf.Bytes())
+	}
 	chkfatal("Reading the package definition", err)
 
 	// There are two pieces of information we want out of the package definition:
