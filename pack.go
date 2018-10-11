@@ -34,9 +34,14 @@ func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg
 	tree["sandstorm-manifest"] = &File{data: manifest}
 	tree["sandstorm-http-bridge-config"] = &File{data: bridgeCfg}
 
-	// Remove /var, since sandstorm won't make it available anyway. This
+	// Replace /var with an empty directory, since this is supposed to be
+	// per-grain storage (as opposed to shared app storage) anyway. This
 	// can make images a bit smaller, since often stuff gets left there.
-	delete(tree, "var")
+	// by the build process.
+	//
+	// Note that the directory still needs to exist, since otherwise
+	// it never gets created.
+	tree["var"] = &File{kids: Tree{}}
 
 	err = tree.ToArchive(ret)
 	return ret, err
