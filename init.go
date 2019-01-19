@@ -41,7 +41,7 @@ func initCmd() {
 	keyBytes, err := keyFile.Struct.Message().Marshal()
 	chkfatal("Serializing app key", err)
 
-	keyringFile, err := os.OpenFile(*keyringPath, os.O_WRONLY|os.O_APPEND, 0600)
+	keyringFile, err := os.OpenFile(*keyringPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
 	chkfatal("Opening the keyring for writing", err)
 	defer keyringFile.Close()
 
