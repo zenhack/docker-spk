@@ -16,17 +16,29 @@ Note that:
   no effect on the app. For other forms of customization, edit
   `sandstorm-pkgdef.capnp`.
 
-# Building
+# Installing
 
-1. Install a Go toolchain and [dep][dep].
-2. From the root of the repository, run:
+In addition to `docker-spk` itself, you will also need the `capnp`
+command line tool somewhere in your `$PATH`; see the [Cap'n Proto
+documentation][capnp-install] for setup.
+
+## From Pre-Built Binaries
+
+The [releases page][releases] distributes tar archives containing x86_64
+binaries of `docker-spk` for Linux and MacOS; extract the archive, and
+place the appropriate
+
+## From Source
+
+1. Install Go 1.11 or later.
+2. From the root of the source tree, run:
 
 ```sh
-dep ensure
 go build
 ```
 
-This will create an executable `./docker-spk`.
+This will create an executable `./docker-spk`; place it somewhere in
+your `$PATH`.
 
 # Quick Start
 
@@ -87,4 +99,5 @@ See `docker-spk -h`.
 
 Apache 2.0, see COPYING.
 
-[dep]: https://github.com/golang/dep
+[capnp-install]: https://capnproto.org/install.html
+[releases]: https://github.com/zenhack/docker-spk/releases
