@@ -2,6 +2,7 @@ package main
 
 import (
 	"sort"
+	"strings"
 	"zenhack.net/go/sandstorm/capnp/spk"
 )
 
@@ -54,15 +55,20 @@ func (t Tree) ToArchive(dest spk.Archive) error {
 
 }
 
+func getKeys(t Tree) []string {
+	keys := make([]string, 0, len(t))
+	for k, _ := range t {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // Marshal the contents of a directory into an archive. `dest` must
 // already have the correct length.
 func insertDir(dest spk.Archive_File_List, t Tree) error {
 
 	// For the sake of reproducable builds, we sort the keys.
-	keys := make([]string, 0, len(t))
-	for k, _ := range t {
-		keys = append(keys, k)
-	}
+	keys := getKeys(t)
 	sort.Slice(keys, func(i, j int) bool {
 		return keys[i] < keys[j]
 	})
@@ -95,4 +101,23 @@ func insertFile(dest spk.Archive_File, name string, file *File) error {
 		err = dest.SetSymlink(file.target)
 	}
 	return err
+}
+
+// Look for whiteout files in the tree, and remove both them and the files
+// to which they point. See:
+//
+// https://github.com/moby/moby/blob/master/image/spec/v1.md
+func removeWhiteout(t Tree) {
+	keys := getKeys(t)
+	for _, name := range keys {
+		if strings.HasPrefix(name, ".wh.") {
+			delete(t, name)
+			delete(t, name[len(".wh."):])
+		}
+	}
+	for _, file := range t {
+		if file.isDir() {
+			removeWhiteout(file.kids)
+		}
+	}
 }

@@ -166,6 +166,7 @@ func (di *DockerImage) toTree() (Tree, error) {
 		for _, layer := range manifest.Layers {
 			tree.Merge(di.Layers[layer])
 		}
+		removeWhiteout(tree)
 	}
 	return tree, nil
 }
