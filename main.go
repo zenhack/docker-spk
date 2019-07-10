@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -27,16 +26,6 @@ var (
 		"Path to sandstorm keyring",
 	)
 )
-
-// wrapper around filepath.Dir that also canonicalizes the result.
-func dirname(name string) string {
-	return filepath.Clean(filepath.Dir(name))
-}
-
-// wrapper around filepath.Base that also canonicalizes the result.
-func basename(name string) string {
-	return filepath.Clean(filepath.Base(name))
-}
 
 // If the error is not nil, display an error message to the user based on
 // `context` and `err`, and exit the with a failing status.

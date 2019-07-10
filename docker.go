@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"path/filepath"
+	slashpath "path"
 	"regexp"
 )
 
@@ -40,13 +40,14 @@ func buildAbsFileMap(r *tar.Reader) (map[string]*File, error) {
 	ret := map[string]*File{}
 	for it.Next() {
 		hdr := it.Cur()
+		name := slashpath.Clean(hdr.Name)
 		switch hdr.Typeflag {
 		case tar.TypeSymlink:
-			ret[hdr.Name] = &File{
+			ret[name] = &File{
 				target: hdr.Linkname,
 			}
 		case tar.TypeDir:
-			ret[hdr.Name] = &File{
+			ret[name] = &File{
 				kids: Tree{},
 			}
 		case tar.TypeReg:
@@ -54,7 +55,7 @@ func buildAbsFileMap(r *tar.Reader) (map[string]*File, error) {
 			if err != nil {
 				return nil, err
 			}
-			ret[hdr.Name] = &File{
+			ret[name] = &File{
 				data: data,
 				// We treat an executable bit for anyone as an
 				// executable.
@@ -74,7 +75,7 @@ func buildAbsFileMap(r *tar.Reader) (map[string]*File, error) {
 func addRelFile(abs map[string]*File, absPath string) error {
 	if absPath == "." {
 		// The root of the file system (see the documentation
-		// for filepath.Clean). There is no parent directory, so
+		// for path.Clean). There is no parent directory, so
 		// just return.
 		return nil
 	}
@@ -86,10 +87,10 @@ func addRelFile(abs map[string]*File, absPath string) error {
 		}
 		abs[absPath] = file
 	}
-	dirPath, relPath := filepath.Split(absPath)
+	dirPath, relPath := slashpath.Split(absPath)
 
-	dirPath = filepath.Clean(dirPath)
-	relPath = filepath.Clean(relPath)
+	dirPath = slashpath.Clean(dirPath)
+	relPath = slashpath.Clean(relPath)
 
 	if dirPath != "." {
 		// make sure all our ancestors are present.
@@ -112,8 +113,8 @@ func buildTree(abs map[string]*File) (Tree, error) {
 		kids: Tree{},
 	}
 	abs["."] = root
-	for absPath, _ := range abs {
-		err := addRelFile(abs, filepath.Clean(absPath))
+	for absPath := range abs {
+		err := addRelFile(abs, absPath)
 		if err != nil {
 			return nil, err
 		}
