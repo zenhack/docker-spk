@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base32"
 	"errors"
 	"flag"
 	"fmt"
@@ -10,11 +9,6 @@ import (
 )
 
 var (
-	// Sandstorm uses a custom base32 alphabet when displaying
-	// app-ids/public keys.
-	SandstormBase32Encoding = base32.NewEncoding("0123456789acdefghjkmnpqrstuvwxyz").
-				WithPadding(base32.NoPadding)
-
 	ErrNotADir = errors.New("Not a directory")
 )
 

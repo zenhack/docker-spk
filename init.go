@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"flag"
 	"os"
+
+	"zenhack.net/go/sandstorm/exp/spk"
 )
 
 type PkgDefParams struct {
@@ -27,26 +29,18 @@ func randU64() uint64 {
 func initCmd() {
 	flag.Parse()
 
-	keyFile, err := GenerateKey()
+	key, err := spk.GenerateKey(nil)
 	chkfatal("Generating a key", err)
 
-	pubKey, err := keyFile.PublicKey()
+	appId, err := key.AppId()
 	chkfatal("Getting public key", err)
 
 	params := &PkgDefParams{
-		AppId:    SandstormBase32Encoding.EncodeToString(pubKey),
+		AppId:    appId.String(),
 		SchemaId: randU64() | (1 << 63),
 	}
 
-	keyBytes, err := keyFile.Struct.Message().Marshal()
-	chkfatal("Serializing app key", err)
-
-	keyringFile, err := os.OpenFile(*keyringPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
-	chkfatal("Opening the keyring for writing", err)
-	defer keyringFile.Close()
-
-	_, err = keyringFile.Write(keyBytes)
-	chkfatal("Saving the app key", err)
+	chkfatal("Saving the app key", key.AddToFile(*keyringPath))
 
 	pkgDefFile, err := os.Create("sandstorm-pkgdef.capnp")
 	chkfatal("Creating sandstorm-pkgdef.capnp", err)

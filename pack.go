@@ -128,10 +128,11 @@ func doPack(pFlags *packFlags) {
 		metadata.appId = pFlags.altAppKey
 	}
 
-	appPubKey, err := SandstormBase32Encoding.DecodeString(metadata.appId)
+	var appId spk.AppId
+	err = (&appId).UnmarshalText([]byte(metadata.appId))
 	chkfatal("Parsing the app id", err)
 
-	appKey, err := keyring.GetKey(appPubKey)
+	appKey, err := keyring.GetKey(appId)
 	chkfatal("Fetching the app private key", err)
 
 	var archive capnp_spk.Archive
