@@ -9,12 +9,17 @@ golang.org/x/crypto v0.0.0-20180808211826-de0752318171/go.mod h1:6SG95UA2DQfeDnf
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 h1:DZhuSZLsGlFL4CmhA8BcRA0mnthyA/nZ00AqCUo7vHg=
 golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/net v0.0.0-20180208041118-f5dfe339be1d/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3/go.mod h1:t9HGtf8HONx5eT2rtn7q6eTqICYqUVnKs3thJo3Qplg=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 zenhack.net/go/sandstorm v0.0.0-20180621213519-e2eb6d78e659 h1:Uj/PFxtttck1C5nxcHgUzzvbOIo07iOGh7maPaaqPCw=
 zenhack.net/go/sandstorm v0.0.0-20180621213519-e2eb6d78e659/go.mod h1:i6y2eNu4IQKERM4j6PdKGSZwMXN6J2u62DydpPWm3Ws=
+zenhack.net/go/sandstorm v0.0.0-20200222051010-915f0237fe55 h1:lAQ9zC9Ql7fSXhV4BkEeV9d7HfHT8eVOii6+GlogQyY=
+zenhack.net/go/sandstorm v0.0.0-20200222051010-915f0237fe55/go.mod h1:nctDv1C0fmgzAe0M/DtptBA/Ug5hSK6MEMkRHExJCNo=
+zenhack.net/go/sandstorm v0.0.0-20200724231323-be1af19658ec h1:Jnv8gZrBtHzpWvA7AigDXTC8dBzHIpuVhoRLLBGm84s=
+zenhack.net/go/sandstorm v0.0.0-20200724231323-be1af19658ec/go.mod h1:bbZgjJKSFmI/pHVdDhgebKI1Pq71vBNDh/d3VfFzqSA=
 zombiezen.com/go/capnproto2 v0.0.0-20180404044107-e89f9b7f0213 h1:avk+C9wZL8rFTk6g0elddoCFExaY9wT8c4SXmoyp9Eo=
 zombiezen.com/go/capnproto2 v0.0.0-20180404044107-e89f9b7f0213/go.mod h1:XO5Pr2SbXgqZwn0m0Ru54QBqpOf4K5AYBO+8LAOBQEQ=
 zombiezen.com/go/capnproto2 v2.17.1-0.20180404044107-e89f9b7f0213+incompatible h1:roPDgwVyDDB1/qOcpbXnow3TaR8W8If716DPLOcu4T8=
