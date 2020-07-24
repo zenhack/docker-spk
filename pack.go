@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/ulikunitz/xz"
-	"zenhack.net/go/sandstorm/capnp/spk"
+	capnp_spk "zenhack.net/go/sandstorm/capnp/spk"
+	"zenhack.net/go/sandstorm/exp/spk"
 	"zombiezen.com/go/capnproto2"
 )
 
@@ -16,8 +16,8 @@ import (
 // (and definitely allocating in the same message). The resulting archive
 // is an orphan inside the message; it must be attached somewhere for it
 // to be reachable.
-func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg []byte) (spk.Archive, error) {
-	ret, err := spk.NewArchive(seg)
+func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg []byte) (capnp_spk.Archive, error) {
+	ret, err := capnp_spk.NewArchive(seg)
 	if err != nil {
 		return ret, err
 	}
@@ -47,18 +47,17 @@ func buildArchive(dockerImage io.Reader, seg *capnp.Segment, manifest, bridgeCfg
 	return ret, err
 }
 
-// Read in the docker image located at filename, and return the raw bytes of a
-// capnproto message with an equivalent Archive as its root. The second argument
-// is the raw bytes of the file "sandstorm-manifest", which will be added to the
-// archive.
-func archiveBytesFromFilename(filename string, manifestBytes, bridgeCfgBytes []byte) []byte {
+// Read in the docker image located at filename, and return a capnproto message with an
+// equivalent Archive as its root. The second argument is the raw bytes of the file
+// "sandstorm-manifest", which will be added to the archive.
+func archiveFromFilename(filename string, manifestBytes, bridgeCfgBytes []byte) capnp_spk.Archive {
 	file, err := os.Open(filename)
 	chkfatal("opening image file", err)
 	defer file.Close()
-	return archiveBytesFromReader(file, manifestBytes, bridgeCfgBytes)
+	return archiveFromReader(file, manifestBytes, bridgeCfgBytes)
 }
 
-func archiveBytesFromDocker(image string, mainfestBytes, bridgeCfgBytes []byte) []byte {
+func archiveFromDocker(image string, mainfestBytes, bridgeCfgBytes []byte) capnp_spk.Archive {
 	cmd := exec.Command("docker", "save", image)
 	stdout, err := cmd.StdoutPipe()
 	chkfatal("Getting standard output from docker save", err)
@@ -67,19 +66,17 @@ func archiveBytesFromDocker(image string, mainfestBytes, bridgeCfgBytes []byte) 
 	defer func() {
 		chkfatal("Waiting for docker save", cmd.Wait())
 	}()
-	return archiveBytesFromReader(stdout, mainfestBytes, bridgeCfgBytes)
+	return archiveFromReader(stdout, mainfestBytes, bridgeCfgBytes)
 }
 
-func archiveBytesFromReader(r io.Reader, manifestBytes, bridgeCfgBytes []byte) []byte {
+func archiveFromReader(r io.Reader, manifestBytes, bridgeCfgBytes []byte) capnp_spk.Archive {
 	archiveMsg, archiveSeg, err := capnp.NewMessage(capnp.SingleSegment([]byte{}))
 	chkfatal("allocating a message", err)
 	archive, err := buildArchive(r, archiveSeg, manifestBytes, bridgeCfgBytes)
 	chkfatal("building the archive", err)
 	err = archiveMsg.SetRoot(archive.Struct.ToPtr())
 	chkfatal("setting root pointer", err)
-	bytes, err := archiveMsg.Marshal()
-	chkfatal("marshalling archive message", err)
-	return bytes
+	return archive
 }
 
 // Flags for the pack subcommand.
@@ -123,7 +120,7 @@ func packCmd() {
 func doPack(pFlags *packFlags) {
 	metadata := getPkgMetadata(pFlags.pkgDefFile, pFlags.pkgDefVar)
 
-	keyring, err := loadKeyring(*keyringPath)
+	keyring, err := spk.LoadKeyring(*keyringPath)
 	chkfatal("loading the sandstorm keyring", err)
 
 	if pFlags.altAppKey != "" {
@@ -134,19 +131,18 @@ func doPack(pFlags *packFlags) {
 	appPubKey, err := SandstormBase32Encoding.DecodeString(metadata.appId)
 	chkfatal("Parsing the app id", err)
 
-	appKeyFile, err := keyring.GetKey(appPubKey)
+	appKey, err := keyring.GetKey(appPubKey)
 	chkfatal("Fetching the app private key", err)
 
-	var archiveBytes []byte
+	var archive capnp_spk.Archive
 	if pFlags.imageFile != "" {
-		archiveBytes = archiveBytesFromFilename(pFlags.imageFile, metadata.manifest, metadata.bridgeCfg)
+		archive = archiveFromFilename(pFlags.imageFile, metadata.manifest, metadata.bridgeCfg)
 	} else if pFlags.image != "" {
-		archiveBytes = archiveBytesFromDocker(pFlags.image, metadata.manifest, metadata.bridgeCfg)
+		archive = archiveFromDocker(pFlags.image, metadata.manifest, metadata.bridgeCfg)
 	} else {
 		// pFlags.Parse() should have ruled this out.
 		panic("impossible")
 	}
-	sigBytes := signatureMessage(appKeyFile, archiveBytes)
 
 	if pFlags.outFilename == "" {
 		// infer output file from app metadata:
@@ -157,17 +153,5 @@ func doPack(pFlags *packFlags) {
 	chkfatal("opening output file", err)
 	defer outFile.Close()
 
-	_, err = outFile.Write(spk.MagicNumber)
-	chkfatal("writing magic number", err)
-
-	compressedOut, err := xz.NewWriter(outFile)
-	chkfatal("creating compressed output", err)
-
-	_, err = compressedOut.Write(sigBytes)
-	chkfatal("Writing signature", err)
-
-	_, err = compressedOut.Write(archiveBytes)
-	chkfatal("Writing archive", err)
-
-	chkfatal("Finalizing the compression", compressedOut.Close())
+	chkfatal("Writing spk", spk.PackInto(outFile, appKey, archive))
 }
