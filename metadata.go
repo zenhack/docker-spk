@@ -1,11 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"os"
-	"os/exec"
-
-	"zenhack.net/go/sandstorm/capnp/spk"
+	"zenhack.net/go/sandstorm/exp/spk"
 	"zombiezen.com/go/capnproto2"
 )
 
@@ -21,16 +17,8 @@ func getPkgMetadata(pkgDefFile, pkgDefVar string) *pkgMetadata {
 	// path for the capnp command.
 	tmpDir, err := saveSchemaFiles()
 	chkfatal("Saving temporary schema files", err)
-	cmd := exec.Command(
-		"capnp", "eval", "--binary", "-I", tmpDir, pkgDefFile, pkgDefVar,
-	)
-	stderrBuf := &bytes.Buffer{}
-	cmd.Stderr = stderrBuf
-	pkgDefBytes, err := cmd.Output()
-	deleteSchemaFiles(tmpDir)
-	if err != nil {
-		os.Stderr.Write(stderrBuf.Bytes())
-	}
+	defer deleteSchemaFiles(tmpDir)
+	pkgDef, err := spk.ReadPackageDefinition(pkgDefFile, pkgDefVar, []string{tmpDir})
 	chkfatal("Reading the package definition", err)
 
 	// There are two pieces of information we want out of the package definition:
@@ -38,13 +26,7 @@ func getPkgMetadata(pkgDefFile, pkgDefVar string) *pkgMetadata {
 	// 1. The app id, which tells us which key to use to sign the package.
 	// 2. The manifest, which we embed in the package's archive.
 
-	pkgDefMsg, err := capnp.Unmarshal(pkgDefBytes)
-	chkfatal("Parsing the package definition message", err)
-
-	pkgDefVal, err := spk.ReadRootPackageDefinition(pkgDefMsg)
-	chkfatal("Parsing the package definition message struct", err)
-
-	pkgManifest, err := pkgDefVal.Manifest()
+	pkgManifest, err := pkgDef.Manifest()
 	chkfatal("Reading the package manifest", err)
 
 	appTitle, err := pkgManifest.AppTitle()
@@ -59,10 +41,10 @@ func getPkgMetadata(pkgDefFile, pkgDefVar string) *pkgMetadata {
 	versionText, err := appMarketingVersion.DefaultText()
 	chkfatal("Getting version text", err)
 
-	appIdStr, err := pkgDefVal.Id()
+	appIdStr, err := pkgDef.Id()
 	chkfatal("Reading the package's app id", err)
 
-	bridgeCfg, err := pkgDefVal.BridgeConfig()
+	bridgeCfg, err := pkgDef.BridgeConfig()
 	chkfatal("Reading the bridge config", err)
 
 	// Generate the contents of the file /sandstorm-manifest
