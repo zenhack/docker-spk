@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
 	"sort"
 	"strings"
 	"zenhack.net/go/sandstorm/capnp/spk"
@@ -120,4 +123,53 @@ func removeWhiteout(t Tree) {
 			removeWhiteout(file.kids)
 		}
 	}
+}
+
+// Read a File from the local directory at `root`.
+func readLocalFS(root string) (*File, error) {
+	fi, err := os.Lstat(root)
+	if err != nil {
+		return nil, err
+	}
+	mode := fi.Mode()
+	typ := mode & os.ModeType
+	switch typ {
+	case os.ModeDir:
+		t, err := readLocalFSTree(root)
+		return &File{kids: t}, err
+	case os.ModeSymlink:
+		target, err := os.Readlink(root)
+		return &File{target: target}, err
+	case 0:
+		// regular file
+		data, err := ioutil.ReadFile(root)
+		return &File{
+			data:  data,
+			isExe: mode&0111 != 0,
+		}, err
+	default:
+		return nil, fmt.Errorf("%q: unsupported file type: '%v'", root, typ)
+	}
+}
+
+// Read the local directory at `root` into a tree.
+func readLocalFSTree(root string) (Tree, error) {
+	f, err := os.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	fis, err := f.Readdir(0)
+	f.Close()
+	if err != nil {
+		return nil, err
+	}
+	ret := make(Tree, len(fis))
+	for _, fi := range fis {
+		node, err := readLocalFS(root + "/" + fi.Name())
+		if err != nil {
+			return nil, err
+		}
+		ret[fi.Name()] = node
+	}
+	return ret, nil
 }
