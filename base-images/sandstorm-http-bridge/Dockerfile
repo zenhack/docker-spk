@@ -2,9 +2,9 @@
 # sandstorm-http-bridge. It is not runnable as an app itself, but is probably
 # a good base to build other stock images from.
 
-FROM alpine:3.8 as builder
+FROM alpine:3.14 as builder
 
-ENV SANDSTORM_VERSION=238
+ENV SANDSTORM_VERSION=276
 
 # For strip:
 RUN apk add binutils
@@ -16,5 +16,5 @@ RUN cp sandstorm-*/bin/sandstorm-http-bridge ./
 # Stripping the binary reduces its size by about 10x:
 RUN strip sandstorm-http-bridge
 
-FROM alpine:3.8
+FROM alpine:3.14
 COPY --from=builder sandstorm-http-bridge /
