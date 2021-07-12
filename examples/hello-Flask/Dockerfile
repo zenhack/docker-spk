@@ -1,10 +1,10 @@
-FROM zenhack/sandstorm-http-bridge:238 as builder
+FROM zenhack/sandstorm-http-bridge:276 as builder
 
 RUN apk add \
-	python2 \
+	python3 \
 	build-base \
-	python2-dev \
-	py2-virtualenv
+	python3-dev \
+	py3-virtualenv
 
 WORKDIR /app
 
@@ -13,6 +13,6 @@ RUN .venv/bin/pip install gunicorn
 ADD * ./
 RUN .venv/bin/pip install .
 
-FROM zenhack/sandstorm-http-bridge:238
-RUN apk add python2
+FROM zenhack/sandstorm-http-bridge:276
+RUN apk add python3
 COPY --from=builder /app /app
