@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 )
 
@@ -49,14 +48,12 @@ func (f *buildFlags) Parse() {
 	f.pkgDefVar = pkgDefParts[1]
 }
 
-var buildOkRegexp = regexp.MustCompile("Successfully built ([0-9a-fA-F]+)")
-
 func buildCmd() {
 	bFlags := &buildFlags{}
 	bFlags.Register()
 	bFlags.Parse()
 
-	cmd := exec.Command("docker", "build", ".")
+	cmd := exec.Command("docker", "build", "-q", ".")
 	cmd.Stderr = os.Stderr
 	out, err := cmd.StdoutPipe()
 	chkfatal("Creating pipe for docker build", err)
@@ -67,10 +64,7 @@ func buildCmd() {
 	for r.Scan() {
 		line := r.Text()
 		fmt.Println(line)
-		subs := buildOkRegexp.FindStringSubmatch(line)
-		if subs != nil && len(subs) == 2 {
-			image = subs[1]
-		}
+		image = line
 	}
 	chkfatal("Parsing output from docker build", err)
 	chkfatal("Problem invoking docker build", cmd.Wait())
